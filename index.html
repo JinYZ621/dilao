@@ -1,0 +1,687 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#101827">
+<title>KMD卡米达 - 像素纪元：失落大陆</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101827;color:#f4f5ff;font-family:Consolas,"Microsoft YaHei",monospace;overflow:hidden}
+button{font:inherit;cursor:pointer}
+#app{height:100dvh;display:flex;flex-direction:column;background:radial-gradient(ellipse at top,#263b55,#101827 75%)}
+header{height:54px;flex-shrink:0;background:#111d2e;border-bottom:2px solid #405774;display:flex;align-items:center;justify-content:space-between;padding:0 14px;z-index:4}
+.logo{font-weight:900;color:#ffd477;letter-spacing:2px;font-size:16px;text-shadow:2px 2px #604326}
+.logo small{display:block;color:#9aabc2;font-size:9px;letter-spacing:3px}
+.head-actions{display:flex;gap:6px}
+.head-actions button{background:#263b56;color:white;border:1px solid #657c9b;border-radius:4px;padding:7px 10px;font-size:11px}
+#main{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:8px}
+#frame{width:min(1100px,100%);height:min(720px,100%);position:relative;overflow:hidden;border:3px solid #627b9d;box-shadow:0 0 0 4px #0a1220,0 15px 50px #0009;background:#274d3c}
+canvas#game{width:100%;height:100%;display:block;image-rendering:pixelated}
+#hud{position:absolute;top:10px;left:10px;pointer-events:none;background:#101a2be8;border:1px solid #7186a5;padding:8px;width:205px;border-radius:4px}
+#name{font-size:12px;color:#ffd477;margin-bottom:6px;font-weight:bold}
+.stat{font-size:10px;display:flex;justify-content:space-between;margin-top:3px}
+.bar{height:9px;background:#28384d;border:1px solid #64758d;margin-top:3px}
+.fill{height:100%;width:100%;transition:width .15s}
+#hpfill{background:#f05268}#mpfill{background:#4d9bfa}#expfill{background:#f4c65f}
+#info{position:absolute;right:10px;top:10px;padding:8px 10px;background:#101a2be8;border:1px solid #7186a5;border-radius:4px;font-size:11px;line-height:1.8;text-align:right;pointer-events:none}
+#quest{position:absolute;right:10px;top:112px;width:195px;padding:9px;background:#101a2be8;border:1px solid #7186a5;border-radius:4px;font-size:11px;line-height:1.7;pointer-events:none}
+#quest b{color:#ffd477}
+#mapbox{position:absolute;right:10px;bottom:65px;width:130px;height:100px;background:#101a2be8;border:2px solid #8195b0}
+#minimap{width:100%;height:100%}
+#toast{position:absolute;top:23%;left:50%;transform:translateX(-50%);padding:9px 17px;background:#101a2bf2;border:1px solid #ffd477;color:#ffd477;border-radius:4px;font-size:12px;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1}
+#hint{position:absolute;bottom:15px;left:50%;transform:translateX(-50%);background:#101a2be8;border:1px solid #8195b0;padding:8px 13px;border-radius:4px;font-size:11px;display:none;white-space:nowrap;pointer-events:none}
+#skills{position:absolute;left:10px;bottom:10px;display:flex;gap:5px;pointer-events:none}
+.slot{width:39px;height:39px;background:#182b43ed;border:2px solid #8398b5;border-radius:4px;display:grid;place-items:center;font-size:17px;position:relative}
+.slot small{position:absolute;bottom:0;right:3px;font-size:9px}
+#overlay{position:absolute;inset:0;background:#07111de8;display:flex;align-items:center;justify-content:center;z-index:8}
+.panel{width:min(440px,92%);max-height:90%;overflow:auto;background:linear-gradient(145deg,#2a405e,#142238);border:3px solid #8196b4;box-shadow:0 0 0 4px #0a1423,0 15px 50px #0009;padding:22px;text-align:center}
+.panel h1{color:#ffd477;font-size:28px;text-shadow:3px 3px #674827;margin:7px 0}
+.panel h2{color:#ffd477;font-size:18px}
+.panel p{color:#c7d5e8;font-size:12px;line-height:1.8}
+.btn{display:block;width:100%;margin:8px 0;padding:11px;color:#172236;font-weight:bold;border:2px solid #ffe3a0;border-radius:4px;background:linear-gradient(#ffe5a3,#dca94f)}
+.btn.secondary{color:#eef4ff;background:#344b69;border-color:#7891b3}
+.btn.danger{color:white;background:#853c4c;border-color:#c77c8b}
+#dialog{position:absolute;bottom:12px;left:4%;right:4%;z-index:6;background:#101a2bf5;border:2px solid #d6b66c;padding:12px 15px;display:none;min-height:100px}
+#dialogName{color:#ffd477;font-weight:bold;margin-bottom:6px}
+#dialogText{font-size:12px;line-height:1.8}
+#dialogNext{float:right;background:#d9b56a;color:#1b2637;border:0;padding:6px 13px;margin-top:6px}
+#mobile{position:absolute;inset:0;pointer-events:none;display:none}
+#pad{position:absolute;left:13px;bottom:12px;width:118px;height:118px;pointer-events:auto}
+.padbtn{position:absolute;width:38px;height:38px;background:#15243ccc;border:1px solid #9aacc5;color:white;border-radius:6px;touch-action:none}
+#up{top:0;left:40px}#down{bottom:0;left:40px}#left{top:40px;left:0}#right{top:40px;right:0}
+#actions{position:absolute;right:12px;bottom:15px;display:flex;gap:7px;pointer-events:auto}
+.act{width:49px;height:49px;border-radius:50%;border:2px solid #d6e4ff;color:white;background:#345c91dd;font-size:10px;touch-action:none}
+.act.attack{background:#a53b4fdd}
+footer{height:22px;text-align:center;color:#8294ae;font-size:9px;padding:5px;flex-shrink:0}
+@media(max-width:700px){
+ header{height:46px;padding:0 7px}.logo{font-size:12px}.head-actions{gap:3px}.head-actions button{padding:6px;font-size:9px}
+ #main{padding:3px}#frame{border-width:2px}
+ #hud{top:5px;left:5px;width:145px;padding:5px}.stat{font-size:9px}#name{font-size:10px}
+ #info{top:5px;right:5px;padding:5px;font-size:9px}
+ #quest{top:93px;right:5px;width:135px;padding:6px;font-size:9px}
+ #mapbox{right:5px;bottom:65px;width:90px;height:70px}
+ #mobile{display:block}#hint{bottom:135px;font-size:10px}
+ #skills{bottom:5px;left:5px}.slot{width:31px;height:31px}
+ footer{height:17px;font-size:8px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+ <div class="logo">KMD卡米达<small>PIXEL AGE · LOST CONTINENT</small></div>
+ <div class="head-actions">
+  <button onclick="openPanel('背包')">背包 I</button>
+  <button onclick="openPanel('角色')">角色 C</button>
+  <button onclick="openPanel('排行榜')">排行</button>
+  <button onclick="saveGame()">存档</button>
+ </div>
+</header>
+<main id="main">
+<div id="frame">
+ <canvas id="game" width="960" height="600"></canvas>
+ <div id="hud">
+  <div id="name">★ 冒险者 Lv.1</div>
+  <div class="stat"><span>生命 HP</span><span id="hptext">100/100</span></div><div class="bar"><div class="fill" id="hpfill"></div></div>
+  <div class="stat"><span>魔力 MP</span><span id="mptext">50/50</span></div><div class="bar"><div class="fill" id="mpfill"></div></div>
+  <div class="stat"><span>经验 EXP</span><span id="exptext">0/50</span></div><div class="bar"><div class="fill" id="expfill"></div></div>
+ </div>
+ <div id="info">金币：<span id="gold">0</span> G<br>击败：<span id="kills">0</span><br>区域：<span id="area">新手村</span></div>
+ <div id="quest"><b>✦ 当前任务</b><div id="questtext">与村庄向导交谈，开始冒险。</div></div>
+ <div id="mapbox"><canvas id="minimap" width="130" height="100"></canvas></div>
+ <div id="toast"></div><div id="hint"></div>
+ <div id="skills"><div class="slot">⚔<small>J</small></div><div class="slot">✦<small>K</small></div><div class="slot">🧪<small>1</small></div></div>
+ <div id="dialog"><div id="dialogName"></div><div id="dialogText"></div><button id="dialogNext">继续 ▶</button></div>
+ <div id="mobile">
+  <div id="pad">
+   <button class="padbtn" id="up">▲</button><button class="padbtn" id="down">▼</button>
+   <button class="padbtn" id="left">◀</button><button class="padbtn" id="right">▶</button>
+  </div>
+  <div id="actions"><button class="act" id="dodge">闪避</button><button class="act" id="skill">技能</button><button class="act attack" id="attack">攻击</button></div>
+ </div>
+ <div id="overlay"><div class="panel" id="startpanel">
+  <div style="font-size:42px">⚔️</div><h1>像素纪元</h1><div style="color:#9fcfff;letter-spacing:4px">失 落 大 陆</div>
+  <p>黑暗正在侵蚀大陆，古老魔物已经苏醒。<br>拿起武器，探索未知区域，寻找失落的力量。</p>
+  <button class="btn" onclick="newGame()">开始新的冒险</button>
+  <button class="btn secondary" onclick="continueGame()">继续上次冒险</button>
+  <button class="btn secondary" onclick="openPanel('排行榜')">查看排行榜</button>
+  <p>WASD / 方向键移动 · J攻击 · K技能 · E交互<br>Shift闪避 · I背包 · C角色 · ESC暂停</p>
+ </div></div>
+</div>
+</main>
+<footer>KMD卡米达 · 虚构游戏工作室作品 · PIXEL AGE © 2026</footer>
+</div>
+<script>
+"use strict";
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
+const mini=document.getElementById("minimap"),mx=mini.getContext("2d");
+const W=960,H=600,T=32,MAPW=60,MAPH=42;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const rand=(a,b)=>a+Math.random()*(b-a);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+let keys={},running=false,paused=false,last=0,toastTimer=0,dialogLines=[],dialogIndex=0;
+let cam={x:0,y:0},world=[],enemies=[],chests=[],particles=[],texts=[],npcs=[],portals=[];
+let player,game,near=null,areaName="新手村",bossSpawned=false;
+const saveKey="KMD_PIXEL_AGE_SAVE_V1";
+const rankKey="KMD_PIXEL_AGE_RANK_V1";
+const areas=[
+ {name:"新手村",x:2,y:2,w:18,h:15,ground:"#568b56",detail:"#477747"},
+ {name:"翠绿森林",x:21,y:2,w:18,h:17,ground:"#326c45",detail:"#28583a"},
+ {name:"幽暗地牢",x:42,y:2,w:16,h:17,ground:"#4c4b62",detail:"#39394e"},
+ {name:"熔岩峡谷",x:21,y:22,w:18,h:17,ground:"#75453c",detail:"#5d352f"},
+ {name:"魔王城堡",x:42,y:22,w:16,h:17,ground:"#51405e",detail:"#382d48"}
+];
+function initWorld(){
+ world=Array.from({length:MAPH},(_,y)=>Array.from({length:MAPW},(_,x)=>{
+  let a=areas.find(a=>x>=a.x&&x<a.x+a.w&&y>=a.y&&y<a.y+a.h);
+  return {type:a?"grass":"water",area:a?.name||"边界",blocked:!a};
+ }));
+ for(const a of areas){
+  for(let x=a.x;x<a.x+a.w;x++)for(let y=a.y;y<a.y+a.h;y++){
+   if(x===a.x||y===a.y||x===a.x+a.w-1||y===a.y+a.h-1)world[y][x]={type:"wall",area:a.name,blocked:true};
+   else world[y][x]={type:"grass",area:a.name,blocked:false};
+  }
+  for(let i=0;i<Math.floor(a.w*a.h/13);i++){
+   let x=Math.floor(rand(a.x+2,a.x+a.w-2)),y=Math.floor(rand(a.y+2,a.y+a.h-2));
+   if(!isSafeSpot(x,y))continue;
+   if(Math.random()<.65)world[y][x]={type:"tree",area:a.name,blocked:true};
+   else world[y][x]={type:"flower",area:a.name,blocked:false};
+  }
+ }
+ // 村庄道路
+ for(let x=4;x<17;x++)for(let y=8;y<11;y++)world[y][x]={type:"road",area:"新手村",blocked:false};
+ for(let y=4;y<14;y++)for(let x=9;x<12;x++)world[y][x]={type:"road",area:"新手村",blocked:false};
+ // 关键区域入口清理
+ for(const [x,y] of [[10,13],[20,10],[40,10],[30,20],[50,20],[12,7],[14,7],[15,7],[16,7]])clearSpot(x,y);
+}
+function isSafeSpot(x,y){return world[y]?.[x]&&!world[y][x].blocked}
+function clearSpot(x,y){if(world[y])world[y][x]={type:"road",area:world[y][x].area,blocked:false}}
+function tile(x,y){return world[Math.floor(y)]?.[Math.floor(x)]||{blocked:true,type:"wall"}}
+function addEntity(arr,x,y,obj){arr.push({x:x*T+T/2,y:y*T+T/2,...obj})}
+function setupEntities(){
+ enemies=[];chests=[];npcs=[];portals=[];particles=[];texts=[];
+ addEntity(npcs,10,7,{name:"村庄向导",kind:"guide",color:"#ffd477"});
+ addEntity(npcs,14,7,{name:"药剂商人",kind:"merchant",color:"#80d9ff"});
+ addEntity(npcs,28,7,{name:"森林守卫",kind:"guard",color:"#9ce7a6"});
+ addEntity(npcs,49,7,{name:"古代学者",kind:"scholar",color:"#d7a8ff"});
+ addEntity(npcs,29,28,{name:"熔岩铁匠",kind:"smith",color:"#ff9a63"});
+ addEntity(chests,7,5,{opened:false,loot:"药水"});
+ addEntity(chests,16,12,{opened:false,loot:"金币"});
+ addEntity(chests,27,14,{opened:false,loot:"装备"});
+ addEntity(chests,35,6,{opened:false,loot:"金币"});
+ addEntity(chests,46,12,{opened:false,loot:"药水"});
+ addEntity(chests,30,34,{opened:false,loot:"装备"});
+ addEntity(chests,52,32,{opened:false,loot:"金币"});
+ addEntity(portals,19,10,{to:"翠绿森林",tx:22,ty:10});
+ addEntity(portals,40,10,{to:"幽暗地牢",tx:43,ty:10});
+ addEntity(portals,30,20,{to:"熔岩峡谷",tx:30,ty:23});
+ addEntity(portals,40,30,{to:"魔王城堡",tx:43,ty:30});
+ spawnEnemies();
+}
+function spawnEnemies(){
+ const groups=[
+  {area:"新手村",coords:[[5,13],[16,13],[5,4]],type:"史莱姆"},
+  {area:"翠绿森林",coords:[[24,5],[26,12],[34,13],[36,5],[31,16]],type:"森林哥布林"},
+  {area:"幽暗地牢",coords:[[45,5],[48,13],[54,8],[55,14]],type:"骷髅兵"},
+  {area:"熔岩峡谷",coords:[[24,26],[27,34],[35,29],[34,35]],type:"熔岩兽"},
+  {area:"魔王城堡",coords:[[45,26],[48,34],[54,26]],type:"暗影骑士"}
+ ];
+ for(const g of groups)for(const [x,y] of g.coords)addEnemy(x,y,g.type);
+}
+function addEnemy(tx,ty,type,boss=false){
+ const data={
+  "史莱姆":{hp:24,atk:5,speed:28,xp:12,gold:4,color:"#75e58c",size:12},
+  "森林哥布林":{hp:42,atk:9,speed:39,xp:22,gold:8,color:"#b3d56b",size:13},
+  "骷髅兵":{hp:65,atk:13,speed:34,xp:34,gold:12,color:"#d9d4c5",size:14},
+  "熔岩兽":{hp:90,atk:17,speed:43,xp:48,gold:18,color:"#ff8751",size:15},
+  "暗影骑士":{hp:125,atk:21,speed:35,xp:65,gold:24,color:"#a78bdb",size:16},
+  "大陆魔王":{hp:850,atk:30,speed:32,xp:500,gold:300,color:"#e34c70",size:29}
+ };
+ const d=data[type]||data["史莱姆"];
+ enemies.push({x:tx*T+16,y:ty*T+16,type,...d,maxHp:d.hp,alive:true,boss,hit:0,attackCd:0,roam:rand(0,4),homeX:tx*T+16,homeY:ty*T+16});
+}
+function freshPlayer(){
+ return {x:10*T+16,y:12*T+16,r:10,speed:145,hp:100,maxHp:100,mp:50,maxMp:50,level:1,exp:0,nextExp:50,gold:0,atk:12,def:2,kills:0,potions:3,weapon:"初心者短剑",armor:"旅行者服装",score:0,quest:0,completed:false,invuln:0,dodge:0,attackCd:0,skillCd:0,faceX:0,faceY:1};
+}
+function newGame(){
+ player=freshPlayer();game={time:0,chests:0,zone:0,dead:false};initWorld();setupEntities();
+ bossSpawned=false;areaName="新手村";paused=false;running=true;
+ document.getElementById("overlay").style.display="none";
+ toast("冒险开始！去找村庄向导。");updateHUD();requestAnimationFrame(loop);
+}
+function continueGame(){
+ const raw=localStorage.getItem(saveKey);
+ if(!raw){toast("没有找到存档");return}
+ try{
+  const s=JSON.parse(raw);player=s.player;game=s.game||{time:0,chests:0,zone:0};
+  initWorld();setupEntities();
+  if(s.chests)chests.forEach((c,i)=>c.opened=!!s.chests[i]);
+  if(s.kills)player.kills=s.kills;
+  if(s.quest!==undefined)player.quest=s.quest;
+  areaName=s.area||"新手村";paused=false;running=true;
+  document.getElementById("overlay").style.display="none";
+  toast("存档读取成功");updateHUD();requestAnimationFrame(loop);
+ }catch(e){toast("存档读取失败")}
+}
+function saveGame(){
+ if(!player){toast("请先开始游戏");return}
+ localStorage.setItem(saveKey,JSON.stringify({player,game,chests:chests.map(c=>c.opened),kills:player.kills,quest:player.quest,area:areaName}));
+ toast("游戏进度已保存");
+}
+function toast(s){
+ const el=document.getElementById("toast");el.textContent=s;el.classList.add("show");
+ clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),1800);
+}
+function updateHUD(){
+ if(!player)return;
+ const p=player;
+ document.getElementById("name").textContent="★ 冒险者 Lv."+p.level;
+ document.getElementById("hptext").textContent=Math.ceil(p.hp)+"/"+p.maxHp;
+ document.getElementById("mptext").textContent=Math.ceil(p.mp)+"/"+p.maxMp;
+ document.getElementById("exptext").textContent=p.exp+"/"+p.nextExp;
+ document.getElementById("hpfill").style.width=100*p.hp/p.maxHp+"%";
+ document.getElementById("mpfill").style.width=100*p.mp/p.maxMp+"%";
+ document.getElementById("expfill").style.width=100*p.exp/p.nextExp+"%";
+ document.getElementById("gold").textContent=p.gold;
+ document.getElementById("kills").textContent=p.kills;
+ document.getElementById("area").textContent=areaName;
+ document.getElementById("questtext").textContent=questDescription();
+}
+function questDescription(){
+ if(player.quest===0)return "与村庄向导交谈，接受你的第一个任务。";
+ if(player.quest===1)return "击败森林中的 5 只怪物。进度："+Math.min(player.kills,5)+"/5";
+ if(player.quest===2)return "向导等待你的汇报，返回新手村。";
+ if(player.quest===3)return "探索古代地牢，寻找失落的符文。";
+ if(player.quest===4)return "前往魔王城堡，挑战大陆魔王！";
+ if(player.quest>=5)return "主线任务完成！探索大陆并挑战更强敌人。";
+ return "继续探索世界。";
+}
+function levelUp(){
+ while(player.exp>=player.nextExp){
+  player.exp-=player.nextExp;player.level++;
+  player.nextExp=Math.floor(player.nextExp*1.45);
+  player.maxHp+=18;player.maxMp+=8;player.atk+=3;player.def+=1;
+  player.hp=player.maxHp;player.mp=player.maxMp;
+  toast("升级！现在是 Lv."+player.level);
+  burst(player.x,player.y,"#ffe17b",22);
+ }
+ updateHUD();
+}
+function gainXP(n){
+ player.exp+=n;player.score+=n*2;levelUp();updateHUD();
+}
+function blocked(x,y,r=9){
+ const pts=[[x-r,y-r],[x+r,y-r],[x-r,y+r],[x+r,y+r]];
+ return pts.some(([px,py])=>tile(px/T,py/T).blocked);
+}
+function movePlayer(dx,dy,dt){
+ if(!dx&&!dy)return;
+ const l=Math.hypot(dx,dy)||1;dx/=l;dy/=l;
+ player.faceX=dx;player.faceY=dy;
+ const sp=player.speed*(player.dodge>0?2.6:1);
+ const nx=player.x+dx*sp*dt,ny=player.y+dy*sp*dt;
+ if(!blocked(nx,player.y))player.x=nx;
+ if(!blocked(player.x,ny))player.y=ny;
+ player.x=clamp(player.x,T+10,(MAPW-1)*T-10);
+ player.y=clamp(player.y,T+10,(MAPH-1)*T-10);
+}
+function attack(){
+ if(player.attackCd>0)return;
+ player.attackCd=.38;
+ const fx=player.faceX||0,fy=player.faceY||1;
+ let hit=0;
+ for(const e of enemies){
+  if(!e.alive)continue;
+  const dx=e.x-player.x,dy=e.y-player.y,d=Math.hypot(dx,dy);
+  const dot=(dx*fx+dy*fy)/(d||1);
+  if(d<53&&dot>-.1){
+   damageEnemy(e,player.atk+(player.level*2),fx,fy);hit++;
+  }
+ }
+ if(hit)toast("命中 "+hit+" 个目标");
+}
+function skill(){
+ if(player.skillCd>0)return;
+ if(player.mp<15){toast("魔力不足");return}
+ player.mp-=15;player.skillCd=3;
+ let count=0;
+ for(const e of enemies){
+  if(e.alive&&dist(player,e)<105){
+   damageEnemy(e,player.atk*2+15,0,0);count++;
+  }
+ }
+ burst(player.x,player.y,"#77caff",32);
+ toast(count?"星辰冲击！命中 "+count+" 个目标":"释放了星辰冲击");
+ updateHUD();
+}
+function damageEnemy(e,n,fx,fy){
+ if(!e.alive)return;
+ e.hp-=n;e.hit=.15;
+ if(fx||fy){e.x+=fx*12;e.y+=fy*12}
+ floatText(e.x,e.y-15,"-"+Math.floor(n),"#fff0a8");
+ burst(e.x,e.y,e.color,5);
+ if(e.hp<=0){
+  e.alive=false;player.kills++;player.gold+=e.gold;
+  gainXP(e.xp);player.score+=e.gold*3;
+  toast(e.type+" 被击败！ +"+e.gold+"G");
+  if(e.boss){player.quest=5;winGame()}
+  if(player.quest===1&&player.kills>=5)player.quest=2;
+  updateHUD();
+ }
+}
+function enemyUpdate(dt){
+ for(const e of enemies){
+  if(!e.alive)continue;
+  e.hit=Math.max(0,e.hit-dt);e.attackCd-=dt;
+  const d=dist(e,player);
+  if(d<190){
+   if(d>24){
+    const dx=(player.x-e.x)/(d||1),dy=(player.y-e.y)/(d||1);
+    const nx=e.x+dx*e.speed*dt,ny=e.y+dy*e.speed*dt;
+    if(!blocked(nx,e.y,8))e.x=nx;
+    if(!blocked(e.x,ny,8))e.y=ny;
+   }else if(e.attackCd<=0&&player.invuln<=0){
+    e.attackCd=1.15;
+    const dmg=Math.max(1,e.atk-player.def);
+    player.hp-=dmg;player.invuln=.55;
+    floatText(player.x,player.y-15,"-"+dmg,"#ff7886");
+    burst(player.x,player.y,"#ff6979",7);
+    if(player.hp<=0)gameOver();
+   }
+  }else{
+   e.roam-=dt;
+   if(e.roam<=0){e.roam=rand(1,3);e.roamX=rand(-1,1);e.roamY=rand(-1,1)}
+   if(e.roamX){
+    const nx=e.x+e.roamX*e.speed*.22*dt,ny=e.y+e.roamY*e.speed*.22*dt;
+    if(!blocked(nx,ny,8)){e.x=nx;e.y=ny}
+   }
+  }
+ }
+}
+function interact(){
+ if(!near){toast("附近没有可交互对象");return}
+ if(near.kind==="npc")talk(near.entity);
+ else if(near.kind==="chest")openChest(near.entity);
+ else if(near.kind==="portal")usePortal(near.entity);
+}
+function findNear(){
+ near=null;let best=58;
+ const all=[
+  ...npcs.map(e=>({kind:"npc",entity:e})),
+  ...chests.filter(e=>!e.opened).map(e=>({kind:"chest",entity:e})),
+  ...portals.map(e=>({kind:"portal",entity:e}))
+ ];
+ for(const o of all){
+  const d=dist(player,o.entity);
+  if(d<best){best=d;near=o}
+ }
+ const hint=document.getElementById("hint");
+ if(near){
+  hint.style.display="block";
+  hint.textContent=near.kind==="npc"?"按 E 与 "+near.entity.name+" 交谈":near.kind==="chest"?"按 E 打开宝箱":"按 E 进入 "+near.entity.to;
+ }else hint.style.display="none";
+}
+function showDialog(name,lines,callback){
+ dialogLines=Array.isArray(lines)?lines:[lines];dialogIndex=0;
+ window.dialogCallback=callback||null;
+ document.getElementById("dialogName").textContent=name;
+ document.getElementById("dialogText").textContent=dialogLines[0];
+ document.getElementById("dialog").style.display="block";
+ paused=true;
+}
+function nextDialog(){
+ dialogIndex++;
+ if(dialogIndex>=dialogLines.length){
+  document.getElementById("dialog").style.display="none";
+  paused=false;
+  if(window.dialogCallback){const f=window.dialogCallback;window.dialogCallback=null;f()}
+ }else document.getElementById("dialogText").textContent=dialogLines[dialogIndex];
+}
+document.getElementById("dialogNext").onclick=nextDialog;
+function talk(n){
+ if(n.kind==="guide"){
+  if(player.quest===0)showDialog(n.name,["欢迎来到失落大陆，年轻的冒险者。","森林附近出现了许多危险的史莱姆和哥布林。","请击败五只怪物，再回来向我汇报。"],()=>{player.quest=1;toast("接受任务：森林清剿");updateHUD()});
+  else if(player.quest===1)showDialog(n.name,"勇士，森林中的怪物还没有清理完毕。");
+  else if(player.quest===2)showDialog(n.name,["干得漂亮！你证明了自己的实力。","这是给你的奖励：100金币和经验。","古代地牢中还隐藏着失落的符文。"],()=>{player.quest=3;player.gold+=100;gainXP(80);updateHUD()});
+  else if(player.quest===3)showDialog(n.name,"去地牢寻找符文吧，入口在森林东边。");
+  else if(player.quest===4)showDialog(n.name,"魔王就在城堡深处。做好准备再去挑战。");
+  else showDialog(n.name,"大陆的英雄，感谢你守护了这里！");
+ }else if(n.kind==="merchant"){
+  showDialog(n.name,["需要补给吗？我可以出售治疗药水。","一瓶药水 25 金币，恢复 50 点生命值。"],()=>{
+   if(player.gold>=25){player.gold-=25;player.potions++;toast("购买成功：治疗药水");updateHUD()}
+   else toast("金币不足");
+  });
+ }else if(n.kind==="guard"){
+  showDialog(n.name,["森林深处有古老的符文。","击败附近的守卫怪物，也许能找到通往地牢的线索。"]);
+ }else if(n.kind==="scholar"){
+  showDialog(n.name,["传说魔王的力量来自失落符文。","你必须先探索地牢，再前往城堡。"],()=>{
+   if(player.quest===3){player.quest=4;toast("主线更新：挑战魔王");updateHUD()}
+  });
+ }else if(n.kind==="smith"){
+  showDialog(n.name,["我可以强化你的武器。","支付 80 金币，攻击力永久增加 5 点。"],()=>{
+   if(player.gold>=80){player.gold-=80;player.atk+=5;toast("武器强化成功！");updateHUD()}
+   else toast("金币不足");
+  });
+ }
+}
+function openChest(c){
+ if(c.opened)return;
+ c.opened=true;game.chests++;
+ const loot=c.loot;
+ if(loot==="药水"){player.potions+=2;toast("获得治疗药水 x2")}
+ if(loot==="金币"){let n=30+Math.floor(rand(0,50));player.gold+=n;player.score+=n*2;toast("获得 "+n+" 金币")}
+ if(loot==="装备"){player.atk+=4;player.weapon="遗迹强化短剑";toast("获得装备：攻击力 +4")}
+ gainXP(15);updateHUD();burst(c.x,c.y,"#ffdb73",15);
+}
+function usePortal(p){
+ player.x=p.tx*T+16;player.y=p.ty*T+16;areaName=p.to;
+ toast("进入区域："+p.to);updateHUD();
+ if(p.to==="魔王城堡"&&!bossSpawned&&player.quest>=4){
+  bossSpawned=true;addEnemy(50,30,"大陆魔王",true);
+  toast("警告！大陆魔王出现了！");
+ }
+}
+function usePotion(){
+ if(player.potions<=0){toast("没有治疗药水");return}
+ if(player.hp>=player.maxHp){toast("生命值已满");return}
+ player.potions--;player.hp=Math.min(player.maxHp,player.hp+50);
+ toast("恢复 50 点生命值");updateHUD();
+}
+function dodge(){
+ if(player.dodge>0)return;
+ player.dodge=.22;player.invuln=.35;
+}
+function gameOver(){
+ running=false;paused=true;
+ submitScore();
+ showPanel("冒险结束",`你击败了 ${player.kills} 只怪物，获得 ${player.score} 分。`,[
+  ["重新开始",newGame],["查看排行榜",()=>openPanel("排行榜")],["返回标题",titleScreen]
+ ]);
+}
+function winGame(){
+ player.score+=1000;submitScore();
+ showPanel("大陆守护者",`你击败了大陆魔王！最终得分：${player.score}`,[
+  ["继续探索",()=>{paused=false;running=true;requestAnimationFrame(loop)}],
+  ["查看排行榜",()=>openPanel("排行榜")]
+ ]);
+}
+function submitScore(){
+ if(!player)return;
+ let list=JSON.parse(localStorage.getItem(rankKey)||"[]");
+ list.push({name:"冒险者",score:player.score,level:player.level,kills:player.kills,date:new Date().toLocaleDateString()});
+ list.sort((a,b)=>b.score-a.score);list=list.slice(0,10);
+ localStorage.setItem(rankKey,JSON.stringify(list));
+}
+function showPanel(title,desc,buttons){
+ const overlay=document.getElementById("overlay");
+ overlay.style.display="flex";
+ overlay.innerHTML="";
+ const panel=document.createElement("div");panel.className="panel";
+ const h=document.createElement("h2");h.textContent=title;
+ const p=document.createElement("p");p.textContent=desc;
+ panel.append(h,p);
+ buttons.forEach(([label,fn])=>{
+  const b=document.createElement("button");b.className="btn";b.textContent=label;b.onclick=()=>{overlay.style.display="none";fn()};
+  panel.append(b);
+ });
+ overlay.append(panel);
+}
+function openPanel(which){
+ if(!player&&which!=="排行榜"){toast("请先开始游戏");return}
+ paused=true;
+ let html="";
+ if(which==="背包"){
+  html=`<h2>冒险者背包</h2><p>金币：${player.gold} G　药水：${player.potions} 瓶</p><div style="text-align:left;line-height:2;font-size:12px">武器：${player.weapon}<br>防具：${player.armor}<br>治疗药水：恢复 50 HP<br><br><button class="btn" id="usepot">使用治疗药水</button></div>`;
+ }else if(which==="角色"){
+  html=`<h2>角色状态</h2><p>等级：Lv.${player.level}<br>经验：${player.exp}/${player.nextExp}<br>生命：${player.hp}/${player.maxHp}<br>魔力：${player.mp}/${player.maxMp}<br>攻击力：${player.atk}<br>防御力：${player.def}<br>击败怪物：${player.kills}<br>当前得分：${player.score}</p>`;
+ }else if(which==="排行榜"){
+  const list=JSON.parse(localStorage.getItem(rankKey)||"[]");
+  html="<h2>本地排行榜</h2><p>本排行榜记录当前浏览器中的成绩。</p><div style='text-align:left;font-size:12px;line-height:2'>";
+  html+=list.length?list.map((x,i)=>`${i+1}. ${x.name}　${x.score}分　Lv.${x.level}　击败${x.kills}<br>`).join(""):"暂无成绩，完成冒险后即可上榜。";
+  html+="</div>";
+ }else if(which==="暂停"){
+  html="<h2>游戏暂停</h2><p>你的冒险暂时停止。</p><button class='btn' id='resume'>继续游戏</button><button class='btn secondary' id='saveinside'>保存进度</button><button class='btn danger' id='backtitle'>返回标题</button>";
+ }
+ const overlay=document.getElementById("overlay");overlay.style.display="flex";
+ overlay.innerHTML=`<div class="panel">${html}<button class="btn secondary" id="closepanel">关闭</button></div>`;
+ document.getElementById("closepanel").onclick=()=>{overlay.style.display="none";paused=false};
+ const use=document.getElementById("usepot");if(use)use.onclick=()=>{usePotion();openPanel("背包")};
+ const resume=document.getElementById("resume");if(resume)resume.onclick=()=>{overlay.style.display="none";paused=false};
+ const save=document.getElementById("saveinside");if(save)save.onclick=saveGame;
+ const back=document.getElementById("backtitle");if(back)back.onclick=titleScreen;
+}
+function titleScreen(){
+ running=false;paused=true;
+ document.getElementById("overlay").style.display="flex";
+ document.getElementById("overlay").innerHTML=`<div class="panel"><h1>像素纪元</h1><p>失落大陆等待你的下一次冒险。</p><button class="btn" onclick="newGame()">开始新游戏</button><button class="btn secondary" onclick="continueGame()">读取存档</button><button class="btn secondary" onclick="openPanel('排行榜')">排行榜</button></div>`;
+}
+function burst(x,y,color,n){
+ for(let i=0;i<n;i++)particles.push({x,y,vx:rand(-100,100),vy:rand(-100,100),life:rand(.2,.6),max:.6,color,size:rand(2,4)});
+}
+function floatText(x,y,text,color){
+ texts.push({x,y,text,color,life:.8});
+}
+function updateEffects(dt){
+ for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt}
+ particles=particles.filter(p=>p.life>0);
+ for(const t of texts){t.y-=25*dt;t.life-=dt}
+ texts=texts.filter(t=>t.life>0);
+}
+function drawTile(x,y,cell){
+ const px=x*T-cam.x,py=y*T-cam.y;
+ const colors={grass:"#54864e",water:"#326e86",wall:"#39495b",tree:"#28543b",flower:"#649b54",road:"#a28a62"};
+ ctx.fillStyle=colors[cell.type]||"#54864e";ctx.fillRect(px,py,T,T);
+ if(cell.type==="grass"){
+  ctx.fillStyle="#ffffff0b";ctx.fillRect(px+4,py+5,2,2);ctx.fillRect(px+23,py+21,2,3);
+  if((x*7+y*13)%11===0){ctx.fillStyle="#d8d777";ctx.fillRect(px+13,py+12,3,3)}
+ }else if(cell.type==="water"){
+  ctx.fillStyle="#8ac9df55";ctx.fillRect(px+5,py+8,12,2);ctx.fillRect(px+19,py+22,8,2);
+ }else if(cell.type==="wall"){
+  ctx.fillStyle="#617287";ctx.fillRect(px+2,py+3,28,27);ctx.fillStyle="#27384b";ctx.fillRect(px+5,py+6,22,20);
+ }else if(cell.type==="tree"){
+  ctx.fillStyle="#573e2e";ctx.fillRect(px+13,py+17,7,15);
+  ctx.fillStyle="#1c482f";ctx.fillRect(px+4,py+4,24,18);
+  ctx.fillStyle="#397447";ctx.fillRect(px+7,py+1,18,17);
+  ctx.fillStyle="#6ba85c";ctx.fillRect(px+11,py+5,7,5);
+ }else if(cell.type==="flower"){
+  ctx.fillStyle="#ffd3ef";ctx.fillRect(px+14,py+13,4,4);ctx.fillStyle="#ffe48c";ctx.fillRect(px+15,py+14,2,2);
+ }
+}
+function drawCharacter(x,y,color,kind="player",hit=false){
+ const sx=Math.round(x-cam.x),sy=Math.round(y-cam.y);
+ ctx.fillStyle="#0006";ctx.fillRect(sx-8,sy+8,17,5);
+ if(kind==="player"){
+  ctx.fillStyle=hit?"#fff":"#e8c49b";ctx.fillRect(sx-6,sy-12,12,10);
+  ctx.fillStyle="#503d35";ctx.fillRect(sx-7,sy-14,14,5);
+  ctx.fillStyle="#263d70";ctx.fillRect(sx-8,sy-2,16,13);
+  ctx.fillStyle="#e2d9c6";ctx.fillRect(sx-7,sy+10,5,5);ctx.fillRect(sx+2,sy+10,5,5);
+  ctx.fillStyle="#fff";ctx.fillRect(sx+2,sy-8,2,2);
+  ctx.fillStyle="#b9d8ff";ctx.fillRect(sx+9,sy-4,3,14);
+ }else{
+  ctx.fillStyle=hit?"#fff":color;ctx.fillRect(sx-9,sy-8,18,16);
+  ctx.fillStyle="#263044";ctx.fillRect(sx-6,sy-3,3,3);ctx.fillRect(sx+3,sy-3,3,3);
+  ctx.fillStyle="#fff";ctx.fillRect(sx-5,sy-2,1,1);ctx.fillRect(sx+4,sy-2,1,1);
+  ctx.fillStyle=color;ctx.fillRect(sx-6,sy+8,5,4);ctx.fillRect(sx+2,sy+8,5,4);
+ }
+}
+function drawEnemy(e){
+ const x=e.x-cam.x,y=e.y-cam.y;
+ drawCharacter(e.x,e.y,e.color,"enemy",e.hit>0);
+ ctx.fillStyle="#171c28";ctx.fillRect(x-14,y-22,28,4);
+ ctx.fillStyle=e.boss?"#ff3d64":"#f15a6b";
+ ctx.fillRect(x-13,y-21,26*clamp(e.hp/e.maxHp,0,1),2);
+ if(e.boss){ctx.fillStyle="#fff";ctx.font="12px monospace";ctx.textAlign="center";ctx.fillText("大陆魔王",x,y-29)}
+}
+function drawChest(c){
+ const x=c.x-cam.x,y=c.y-cam.y;
+ ctx.fillStyle="#0006";ctx.fillRect(x-10,y+7,20,4);
+ ctx.fillStyle=c.opened?"#775a35":"#a66a35";ctx.fillRect(x-9,y-7,18,14);
+ ctx.fillStyle=c.opened?"#6a573e":"#e6b64c";ctx.fillRect(x-9,y-8,18,5);
+ ctx.fillStyle="#ffe89a";ctx.fillRect(x-2,y-3,4,5);
+}
+function drawNPC(n){
+ const x=n.x-cam.x,y=n.y-cam.y;
+ drawCharacter(n.x,n.y,n.color,"npc");
+ ctx.fillStyle="#fff";ctx.font="10px monospace";ctx.textAlign="center";ctx.fillText(n.name,x,y-19);
+}
+function drawPortal(p){
+ const x=p.x-cam.x,y=p.y-cam.y;
+ ctx.fillStyle="#6ccaff33";ctx.beginPath();ctx.ellipse(x,y,13,19,0,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle="#91dcff";ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(x,y,10,17,0,0,Math.PI*2);ctx.stroke();
+ ctx.fillStyle="#fff";ctx.fillRect(x-2,y-2,4,4);
+}
+function render(){
+ ctx.clearRect(0,0,W,H);
+ const sx=Math.floor(cam.x/T),sy=Math.floor(cam.y/T);
+ for(let y=Math.max(0,sy);y<Math.min(MAPH,sy+21);y++)
+ for(let x=Math.max(0,sx);x<Math.min(MAPW,sx+32);x++)drawTile(x,y,world[y][x]);
+ portals.forEach(drawPortal);chests.forEach(drawChest);npcs.forEach(drawNPC);
+ enemies.filter(e=>e.alive).forEach(drawEnemy);
+ drawCharacter(player.x,player.y,"#fff","player",player.invuln>0&&Math.floor(game.time*18)%2===0);
+ for(const p of particles){ctx.globalAlpha=clamp(p.life/p.max,0,1);ctx.fillStyle=p.color;ctx.fillRect(p.x-cam.x,p.y-cam.y,p.size,p.size)}
+ ctx.globalAlpha=1;
+ for(const t of texts){ctx.globalAlpha=clamp(t.life/.8,0,1);ctx.fillStyle=t.color;ctx.font="bold 13px monospace";ctx.textAlign="center";ctx.fillText(t.text,t.x-cam.x,t.y-cam.y)}
+ ctx.globalAlpha=1;
+ drawMini();
+}
+function drawMini(){
+ mx.clearRect(0,0,130,100);mx.fillStyle="#172638";mx.fillRect(0,0,130,100);
+ const sx=130/MAPW,sy=100/MAPH;
+ for(let y=0;y<MAPH;y+=2)for(let x=0;x<MAPW;x+=2){
+  const c=tile(x,y);mx.fillStyle=c.type==="water"?"#326e86":c.type==="wall"?"#5a6575":c.type==="tree"?"#21472e":c.area==="新手村"?"#77a45e":c.area==="熔岩峡谷"?"#9b5540":"#477f58";
+  mx.fillRect(x*sx,y*sy,sx*2+1,sy*2+1);
+ }
+ mx.fillStyle="#fff";mx.fillRect(player.x/T*sx-2,player.y/T*sy-2,5,5);
+ mx.fillStyle="#ff596d";for(const e of enemies)if(e.alive)mx.fillRect(e.x/T*sx-1,e.y/T*sy-1,3,3);
+}
+function updateCamera(){
+ cam.x=clamp(player.x-W/2,0,MAPW*T-W);
+ cam.y=clamp(player.y-H/2,0,MAPH*T-H);
+}
+function loop(ts){
+ if(!running)return;
+ const dt=Math.min((ts-last)/1000||0,.04);last=ts;
+ if(!paused){
+  game.time+=dt;
+  let dx=0,dy=0;
+  if(keys.KeyW||keys.ArrowUp)dy--;
+  if(keys.KeyS||keys.ArrowDown)dy++;
+  if(keys.KeyA||keys.ArrowLeft)dx--;
+  if(keys.KeyD||keys.ArrowRight)dx++;
+  movePlayer(dx,dy,dt);
+  player.invuln=Math.max(0,player.invuln-dt);
+  player.dodge=Math.max(0,player.dodge-dt);
+  player.attackCd=Math.max(0,player.attackCd-dt);
+  player.skillCd=Math.max(0,player.skillCd-dt);
+  player.mp=Math.min(player.maxMp,player.mp+dt*1.2);
+  enemyUpdate(dt);updateEffects(dt);findNear();updateCamera();
+  const a=areas.find(a=>player.x/T>=a.x&&player.x/T<a.x+a.w&&player.y/T>=a.y&&player.y/T<a.y+a.h);
+  if(a&&areaName!==a.name){areaName=a.name;updateHUD();toast("区域："+areaName)}
+  if(player.quest===3&&areaName==="幽暗地牢"&&player.kills>=5){player.quest=4;toast("发现古代符文！返回学者处");updateHUD()}
+  if(player.quest===4&&areaName==="魔王城堡"&&!bossSpawned){bossSpawned=true;addEnemy(50,30,"大陆魔王",true);toast("大陆魔王出现！")}
+  updateHUD();
+ }
+ render();requestAnimationFrame(loop);
+}
+function keydown(e){
+ const k=e.code;
+ if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(k))e.preventDefault();
+ keys[k]=true;
+ if(e.repeat)return;
+ if(!running)return;
+ if(k==="KeyJ")attack();
+ if(k==="KeyK")skill();
+ if(k==="KeyE"&&!paused)interact();
+ if(k==="Digit1")usePotion();
+ if(k==="ShiftLeft"||k==="ShiftRight")dodge();
+ if(k==="KeyI")openPanel("背包");
+ if(k==="KeyC")openPanel("角色");
+ if(k==="Escape")openPanel("暂停");
+}
+function keyup(e){keys[e.code]=false}
+window.addEventListener("keydown",keydown);window.addEventListener("keyup",keyup);
+function bindHold(id,code){
+ const el=document.getElementById(id);
+ el.addEventListener("pointerdown",e=>{e.preventDefault();keys[code]=true;el.setPointerCapture(e.pointerId)});
+ const end=()=>keys[code]=false;
+ el.addEventListener("pointerup",end);el.addEventListener("pointercancel",end);el.addEventListener("lostpointercapture",end);
+}
+bindHold("up","KeyW");bindHold("down","KeyS");bindHold("left","KeyA");bindHold("right","KeyD");
+document.getElementById("attack").onclick=attack;
+document.getElementById("skill").onclick=skill;
+document.getElementById("dodge").onclick=dodge;
+document.getElementById("inventoryBtn").onclick=()=>openPanel("背包");
+document.getElementById("statusBtn").onclick=()=>openPanel("角色");
+document.getElementById("rankBtn").onclick=()=>openPanel("排行榜");
+document.getElementById("saveBtn").onclick=saveGame;
+window.addEventListener("beforeunload",()=>{if(player&&running)saveGame()});
+initWorld();setupEntities();
+ctx.imageSmoothingEnabled=false;
+mx.imageSmoothingEnabled=false;
+</script>
+</body>
+</html>
